@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <title>מצב נהיגה - משימות לילך</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#b99bff" />
+
+    <style>
+        body {
+            background:#f5eaff;
+            text-align:center;
+            padding:40px;
+            margin:0;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            font-size: 34px;
+            color:#6a4caf;
+            margin-bottom:30px;
+        }
+        #driveBtn {
+            width: 100%;
+            padding: 70px;
+            background:#b99bff;
+            border:none;
+            border-radius:40px;
+            font-size:40px;
+            color:white;
+            font-weight:bold;
+            box-shadow:0 0 10px rgba(0,0,0,0.2);
+        }
+        #driveBtn:active {
+            background:#a578ff;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>מצב נהיגה 🚗🎤</h1>
+
+    <button id="driveBtn">דברי ואני מוסיפה משימה 🎤</button>
+
+    <script>
+        // רושמות סרוויס וורקר (לאפליקציה/offline)
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("./service-worker.js")
+                .catch(err => console.log("SW failed", err));
+        }
+
+        // זיהוי דיבור
+        let recognition;
+
+        if ("webkitSpeechRecognition" in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.lang = "he-IL";
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+
+                // שמירת המשימה ב-localStorage (מפתח משותף לכל האפליקציות בדומיין)
+                const tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+                const task = {
+                    id: Date.now(),
+                    text: text,
+                    time: new Date().toISOString(),
+                    done: false,
+                    subtasks: []
+                };
+                tasks.push(task);
+                localStorage.setItem("tasks", JSON.stringify(tasks));
+
+                // התראה קצרה (אם מותר)
+                if ("Notification" in window && Notification.permission === "granted") {
+                    new Notification("נוספה משימה קולית", { body: text });
+                }
+            };
+        } else {
+            alert("המכשיר לא תומך בזיהוי קול");
+        }
+
+        document.getElementById("driveBtn").onclick = () => {
+            if (recognition) {
+                if ("Notification" in window) {
+                    Notification.requestPermission();
+                }
+                recognition.start();
+            }
+        };
+    </script>
+
+</body>
+</html>
